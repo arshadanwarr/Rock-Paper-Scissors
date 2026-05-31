@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rock Paper Scissors — RL Agent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <!-- Chart.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="badge-row">
+      <span class="badge badge-rl">Reinforcement Learning</span>
+      <span class="badge badge-q">Q-Learning</span>
+      <span class="badge badge-fa">FastAPI + Python</span>
+    </div>
+    <h1>
+      <span class="r">Rock</span>
+      <span class="g">Paper</span>
+      <span class="ai">Scissors</span>
+    </h1>
+    <p class="subtitle">Human vs AI</p>
+  </header>
+
+  <!-- Connection bar -->
+  <div class="conn-bar">
+    <span class="conn-dot" id="connDot"></span>
+    <span id="connLabel">Connecting…</span>
+  </div>
+
+  <!-- ── Scoreboard ──────────────────────────────────────────── -->
+  <div class="scoreboard">
+    <div class="card score-card human">
+      <div class="label">You (Wins)</div>
+      <div class="value" id="scoreHuman">0</div>
+    </div>
+    <div class="card score-card draw">
+      <div class="label">Draws</div>
+      <div class="value" id="scoreDraw">0</div>
+    </div>
+    <div class="card score-card ai">
+      <div class="label">AI (Wins)</div>
+      <div class="value" id="scoreAI">0</div>
+    </div>
+    <div class="card score-card episode">
+      <div class="label">Episodes</div>
+      <div class="value" id="scoreEpisodes">0</div>
+    </div>
+  </div>
+
+  <!-- ── Arena ───────────────────────────────────────────────── -->
+  <div class="arena">
+    <div class="player-side">
+      <span class="player-label">You</span>
+      <div class="choice-display" id="humanDisplay">🤔</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-side">
+      <span class="player-label">AI Agent</span>
+      <div class="choice-display" id="aiDisplay">🤖</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-banner">
+    <div class="result-text" id="resultText">Choose your move!</div>
+  </div>
+
+  <!-- ── Move Buttons ────────────────────────────────────────── -->
+  <div class="move-area">
+    <button class="move-btn" id="btnRock"     onclick="humanPlay(0)">
+      🪨 <span class="btn-label">Rock</span>
+    </button>
+    <button class="move-btn" id="btnPaper"    onclick="humanPlay(1)">
+      📄 <span class="btn-label">Paper</span>
+    </button>
+    <button class="move-btn" id="btnScissors" onclick="humanPlay(2)">
+      ✂️ <span class="btn-label">Scissors</span>
+    </button>
+  </div>
+
+  <!-- ── Controls ────────────────────────────────────────────── -->
+  <div class="controls">
+    <button class="ctrl-btn" id="train10"  onclick="doTrain(10)">Train 10×</button>
+    <button class="ctrl-btn" id="train50"  onclick="doTrain(50)">Train 50×</button>
+    <button class="ctrl-btn" id="train200" onclick="doTrain(200)">Train 200×</button>
+    <button class="ctrl-btn danger" id="btnReset" onclick="doReset()">Reset All</button>
+  </div>
+
+  <!-- AI Mode -->
+  <div class="mode-row">
+    <span class="mode-label">AI Mode:</span>
+    <button class="mode-btn active" id="modeExploit" onclick="setMode('exploit')">Greedy (Exploit)</button>
+    <button class="mode-btn"        id="modeExplore" onclick="setMode('explore')">ε-Greedy (Explore)</button>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Epsilon ─────────────────────────────────────────────── -->
+  <div class="epsilon-row">
+    <span class="eps-label">ε Explore rate</span>
+    <div class="eps-track">
+      <div class="eps-fill" id="epsFill" style="width:100%"></div>
+    </div>
+    <span class="eps-val" id="epsVal">1.000</span>
+  </div>
+
+  <!-- ── Stats ───────────────────────────────────────────────── -->
+  <div class="stats-grid">
+    <div class="card">
+      <div class="card-title">RL Parameters</div>
+      <div class="stat-row">
+        <span class="stat-key">α  (learning rate)</span>
+        <span class="stat-val purple" id="statAlpha">0.30</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">γ  (discount factor)</span>
+        <span class="stat-val purple" id="statGamma">0.90</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">ε  decay / episode</span>
+        <span class="stat-val purple">0.995</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">ε  minimum</span>
+        <span class="stat-val purple">0.05</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Agent Performance</div>
+      <div class="stat-row">
+        <span class="stat-key">AI win rate</span>
+        <span class="stat-val green" id="statWinRate">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Avg reward / ep</span>
+        <span class="stat-val green" id="statAvgReward">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Total reward</span>
+        <span class="stat-val green" id="statTotalReward">0.00</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Total episodes</span>
+        <span class="stat-val green" id="statEpisodes2">0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Reward Design</div>
+      <div class="stat-row">
+        <span class="stat-key">Win</span>
+        <span class="stat-val green">+1.0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Draw</span>
+        <span class="stat-val amber">0.0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Loss</span>
+        <span class="stat-val red">−1.0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key">Algorithm</span>
+        <span class="stat-val purple">Q-Learning</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q-Table ─────────────────────────────────────────────── -->
+  <div class="card" style="margin:.75rem 0;">
+    <div class="card-title">
+      Live Q-Table — State: (AI last move, Human last move) → Q-values per action
+    </div>
+    <div class="qtable-grid" id="qtableGrid">
+      <div style="grid-column:1/-1;color:var(--muted);font-family:var(--font-mono);font-size:.6rem;padding:.5rem;">
+        Loading…
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Reward Chart ────────────────────────────────────────── -->
+  <div class="card chart-wrap" style="margin:.75rem 0;">
+    <div class="card-title">Reward vs Episode — Cumulative Moving Average</div>
+    <canvas id="rewardChart" height="120"></canvas>
+  </div>
+
+  <!-- ── Match History ───────────────────────────────────────── -->
+  <div class="card" style="margin:.75rem 0;">
+    <div class="card-title">Match History (last 40 rounds)</div>
+    <div class="history-list" id="historyList">
+      <div class="hist-item" style="justify-content:center;">No rounds yet</div>
+    </div>
+  </div>
+
+</div><!-- /app-wrapper -->
+
+<!-- Scripts (api.js must load before game.js) -->
+<script src="/static/js/api.js"></script>
+<script src="/static/js/game.js"></script>
+
+</body>
+</html>

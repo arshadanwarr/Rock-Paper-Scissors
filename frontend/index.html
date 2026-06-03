@@ -4,15 +4,465 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rock Paper Scissors — RL Agent</title>
-  <link rel="stylesheet" href="/static/css/style.css" />
-  <!-- Chart.js via CDN -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+/* ============================================================
+   Rock Paper Scissors RL — Main Stylesheet
+   Group: Arshad 425 · Behram 480 · Ahsan 438
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+/* ── Variables ─────────────────────────────────────────────── */
+:root {
+  --bg:      #0a0a0f;
+  --bg2:     #12121a;
+  --bg3:     #1a1a28;
+  --accent:  #7c5cfc;
+  --accent2: #fc5c7c;
+  --accent3: #5cfcbc;
+  --amber:   #fcd05c;
+  --text:    #e8e8f0;
+  --muted:   #6a6a8a;
+  --border:  rgba(255,255,255,0.08);
+  --win:     #5cfcbc;
+  --lose:    #fc5c7c;
+  --draw:    #fcd05c;
+  --radius:  10px;
+  --font-mono: 'Space Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-display);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Background grid */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(124,92,252,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,92,252,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+body > * { position: relative; z-index: 1; }
+
+/* ── Typography ────────────────────────────────────────────── */
+h1,h2,h3 { font-family: var(--font-display); font-weight: 800; }
+
+/* ── Layout ────────────────────────────────────────────────── */
+.app-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.site-header {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+}
+.site-header h1 {
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.site-header h1 .r  { color: var(--accent2); }
+.site-header h1 .g  { color: var(--accent3); }
+.site-header h1 .ai { color: var(--accent);  }
+.site-header .subtitle {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-top: .4rem;
+}
+.badge-row { margin-top: .6rem; }
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  margin: 0 3px;
+}
+.badge-rl { color:var(--accent);  border-color:rgba(124,92,252,.4); background:rgba(124,92,252,.08); }
+.badge-q  { color:var(--accent3); border-color:rgba(92,252,188,.4); background:rgba(92,252,188,.08); }
+.badge-fa { color:var(--amber);   border-color:rgba(252,208,92,.4); background:rgba(252,208,92,.08); }
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.card-title {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .75rem;
+}
+
+/* ── Scoreboard ─────────────────────────────────────────────── */
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px,1fr));
+  gap: .75rem;
+  margin: 1rem 0;
+}
+.score-card { text-align: center; }
+.score-card .label {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .25rem;
+}
+.score-card .value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.score-card.human   .value { color: var(--accent);  }
+.score-card.ai      .value { color: var(--accent2); }
+.score-card.draw    .value { color: var(--amber);   }
+.score-card.episode .value { color: var(--accent3); font-size: 1.4rem; }
+
+/* ── Arena ─────────────────────────────────────────────────── */
+.arena {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+.player-side { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.player-label {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.choice-display {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.4rem;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  transition: all .35s cubic-bezier(.34,1.56,.64,1);
+  user-select: none;
+}
+.choice-display.flash-win  { border-color:var(--win);  box-shadow:0 0 30px rgba(92,252,188,.3); animation: pop .45s ease; }
+.choice-display.flash-lose { border-color:var(--lose); box-shadow:0 0 30px rgba(252,92,124,.3); }
+.choice-display.flash-draw { border-color:var(--amber);box-shadow:0 0 30px rgba(252,208,92,.3); }
+@keyframes pop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.14)} }
+
+.vs-badge {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* ── Result Banner ──────────────────────────────────────────── */
+.result-banner {
+  text-align: center;
+  min-height: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  margin: .25rem 0;
+}
+.result-text {
+  font-size: 1rem;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all .3s ease;
+}
+.result-text.show  { opacity:1; transform:translateY(0); }
+.result-text.win   { color: var(--win);  }
+.result-text.lose  { color: var(--lose); }
+.result-text.draw  { color: var(--amber);}
+.result-text.info  { color: var(--accent3); }
+
+/* ── Move Buttons ───────────────────────────────────────────── */
+.move-area {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  margin: .5rem 0 1rem;
+  flex-wrap: wrap;
+}
+.move-btn {
+  width: 86px; height: 86px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  font-size: 2.4rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  transition: all .2s ease;
+  position: relative;
+  outline: none;
+}
+.move-btn .btn-label {
+  font-family: var(--font-mono);
+  font-size: .5rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1;
+}
+.move-btn:hover {
+  border-color: var(--accent);
+  background: rgba(124,92,252,.12);
+  transform: translateY(-4px) scale(1.06);
+  box-shadow: 0 8px 24px rgba(124,92,252,.25);
+}
+.move-btn:active { transform: scale(.95); }
+.move-btn:disabled { opacity:.35; pointer-events:none; cursor:not-allowed; }
+
+/* ── Control Buttons ────────────────────────────────────────── */
+.controls {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: .6rem;
+  margin: .5rem 0;
+}
+.ctrl-btn {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.ctrl-btn:hover {
+  border-color: rgba(124,92,252,.5);
+  color: var(--text);
+  background: rgba(124,92,252,.1);
+}
+.ctrl-btn.danger:hover {
+  border-color: rgba(252,92,124,.5);
+  color: var(--accent2);
+  background: rgba(252,92,124,.08);
+}
+.ctrl-btn:disabled { opacity:.4; pointer-events:none; }
+
+/* ── Mode Toggle ────────────────────────────────────────────── */
+.mode-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: .5rem; flex-wrap: wrap;
+  margin: .3rem 0;
+}
+.mode-label {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.mode-btn {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.mode-btn.active {
+  border-color: var(--accent3);
+  color: var(--accent3);
+  background: rgba(92,252,188,.08);
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.divider { border:none; border-top: 1px solid var(--border); margin: .75rem 0; }
+
+/* ── Epsilon bar ────────────────────────────────────────────── */
+.epsilon-row {
+  display: flex; align-items: center; gap: 10px;
+  margin: .4rem 0;
+}
+.eps-label {
+  font-family: var(--font-mono);
+  font-size: .56rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+  min-width: 90px;
+}
+.eps-track {
+  flex: 1; height: 4px;
+  background: var(--bg3); border-radius: 2px; overflow: hidden;
+}
+.eps-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 2px; transition: width .5s ease;
+}
+.eps-val {
+  font-family: var(--font-mono);
+  font-size: .58rem; color: var(--accent);
+  min-width: 42px; text-align: right;
+}
+
+/* ── Stats Grid ─────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px,1fr));
+  gap: .75rem;
+  margin: .75rem 0;
+}
+.stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 4px;
+}
+.stat-key { font-size: .74rem; color: var(--muted); }
+.stat-val {
+  font-family: var(--font-mono);
+  font-size: .74rem; font-weight: 700;
+}
+.stat-val.purple { color: var(--accent);  }
+.stat-val.green  { color: var(--accent3); }
+.stat-val.red    { color: var(--accent2); }
+.stat-val.amber  { color: var(--amber);   }
+
+/* ── Q-Table ────────────────────────────────────────────────── */
+.qtable-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 1.2fr;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: .6rem;
+}
+.qt-h {
+  color: var(--muted); text-align: center;
+  padding: 4px 2px; font-size: .56rem;
+  letter-spacing: .06em;
+}
+.qt-state {
+  color: var(--muted); padding: 4px 2px;
+  font-size: .6rem; display: flex; align-items: center;
+}
+.qt-cell {
+  border-radius: 4px; padding: 4px 3px;
+  text-align: center; font-weight: 700;
+  transition: background .4s, color .4s;
+}
+.qt-best {
+  border-radius: 4px; padding: 4px 3px;
+  text-align: center; font-size: .58rem; color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Chart ──────────────────────────────────────────────────── */
+.chart-wrap canvas {
+  width: 100% !important;
+  border-radius: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+/* ── History ─────────────────────────────────────────────────── */
+.history-list {
+  display: flex; flex-direction: column-reverse;
+  gap: 3px; max-height: 180px; overflow-y: auto;
+}
+.history-list::-webkit-scrollbar { width: 4px; }
+.history-list::-webkit-scrollbar-track { background: var(--bg3); }
+.history-list::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+
+.hist-item {
+  display: flex; gap: 8px; align-items: center;
+  font-family: var(--font-mono); font-size: .6rem;
+  color: var(--muted); padding: 4px 8px;
+  border-radius: 4px; background: var(--bg3);
+}
+.hist-ep   { min-width: 32px; }
+.hist-move { flex: 1; }
+.hist-out  { min-width: 55px; text-align: right; font-weight: 700; }
+.hist-out.win  { color: var(--win);  }
+.hist-out.lose { color: var(--lose); }
+.hist-out.draw { color: var(--amber);}
+.hist-rew  { min-width: 38px; text-align: right; }
+
+/* ── Connection status ──────────────────────────────────────── */
+.conn-bar {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: .56rem; letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .4rem 1rem;
+  color: var(--muted);
+}
+.conn-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-right: 5px;
+  vertical-align: middle;
+  transition: background .3s;
+}
+.conn-dot.ok { background: var(--win); box-shadow: 0 0 6px var(--win); }
+.conn-dot.err{ background: var(--lose);}
+
+/* ── Loading spinner ─────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .choice-display { width: 88px; height: 88px; font-size: 2.6rem; }
+  .site-header h1  { font-size: 1.6rem; }
+  .qtable-grid { font-size: .52rem; }
+}
+  </style>
 </head>
 <body>
 
 <div class="app-wrapper">
 
-  <!-- ── Header ─────────────────────────────────────────────── -->
   <header class="site-header">
     <div class="badge-row">
       <span class="badge badge-rl">Reinforcement Learning</span>
@@ -24,16 +474,14 @@
       <span class="g">Paper</span>
       <span class="ai">Scissors</span>
     </h1>
-    <p class="subtitle">Human vs AI</p>
+    <p class="subtitle">Human vs AI · ML Lab Assignment 04 · Arshad 425 · Behram 480 · Ahsan 438</p>
   </header>
 
-  <!-- Connection bar -->
   <div class="conn-bar">
     <span class="conn-dot" id="connDot"></span>
     <span id="connLabel">Connecting…</span>
   </div>
 
-  <!-- ── Scoreboard ──────────────────────────────────────────── -->
   <div class="scoreboard">
     <div class="card score-card human">
       <div class="label">You (Wins)</div>
@@ -53,7 +501,6 @@
     </div>
   </div>
 
-  <!-- ── Arena ───────────────────────────────────────────────── -->
   <div class="arena">
     <div class="player-side">
       <span class="player-label">You</span>
@@ -66,25 +513,16 @@
     </div>
   </div>
 
-  <!-- Result -->
   <div class="result-banner">
     <div class="result-text" id="resultText">Choose your move!</div>
   </div>
 
-  <!-- ── Move Buttons ────────────────────────────────────────── -->
   <div class="move-area">
-    <button class="move-btn" id="btnRock"     onclick="humanPlay(0)">
-      🪨 <span class="btn-label">Rock</span>
-    </button>
-    <button class="move-btn" id="btnPaper"    onclick="humanPlay(1)">
-      📄 <span class="btn-label">Paper</span>
-    </button>
-    <button class="move-btn" id="btnScissors" onclick="humanPlay(2)">
-      ✂️ <span class="btn-label">Scissors</span>
-    </button>
+    <button class="move-btn" id="btnRock"     onclick="humanPlay(0)">🪨<span class="btn-label">Rock</span></button>
+    <button class="move-btn" id="btnPaper"    onclick="humanPlay(1)">📄<span class="btn-label">Paper</span></button>
+    <button class="move-btn" id="btnScissors" onclick="humanPlay(2)">✂️<span class="btn-label">Scissors</span></button>
   </div>
 
-  <!-- ── Controls ────────────────────────────────────────────── -->
   <div class="controls">
     <button class="ctrl-btn" id="train10"  onclick="doTrain(10)">Train 10×</button>
     <button class="ctrl-btn" id="train50"  onclick="doTrain(50)">Train 50×</button>
@@ -92,7 +530,6 @@
     <button class="ctrl-btn danger" id="btnReset" onclick="doReset()">Reset All</button>
   </div>
 
-  <!-- AI Mode -->
   <div class="mode-row">
     <span class="mode-label">AI Mode:</span>
     <button class="mode-btn active" id="modeExploit" onclick="setMode('exploit')">Greedy (Exploit)</button>
@@ -101,97 +538,48 @@
 
   <hr class="divider" />
 
-  <!-- ── Epsilon ─────────────────────────────────────────────── -->
   <div class="epsilon-row">
     <span class="eps-label">ε Explore rate</span>
-    <div class="eps-track">
-      <div class="eps-fill" id="epsFill" style="width:100%"></div>
-    </div>
+    <div class="eps-track"><div class="eps-fill" id="epsFill" style="width:100%"></div></div>
     <span class="eps-val" id="epsVal">1.000</span>
   </div>
 
-  <!-- ── Stats ───────────────────────────────────────────────── -->
   <div class="stats-grid">
     <div class="card">
       <div class="card-title">RL Parameters</div>
-      <div class="stat-row">
-        <span class="stat-key">α  (learning rate)</span>
-        <span class="stat-val purple" id="statAlpha">0.30</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">γ  (discount factor)</span>
-        <span class="stat-val purple" id="statGamma">0.90</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">ε  decay / episode</span>
-        <span class="stat-val purple">0.995</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">ε  minimum</span>
-        <span class="stat-val purple">0.05</span>
-      </div>
+      <div class="stat-row"><span class="stat-key">α  learning rate</span><span class="stat-val purple" id="statAlpha">0.30</span></div>
+      <div class="stat-row"><span class="stat-key">γ  discount factor</span><span class="stat-val purple" id="statGamma">0.90</span></div>
+      <div class="stat-row"><span class="stat-key">ε  decay / episode</span><span class="stat-val purple">0.995</span></div>
+      <div class="stat-row"><span class="stat-key">ε  minimum</span><span class="stat-val purple">0.05</span></div>
     </div>
-
     <div class="card">
       <div class="card-title">Agent Performance</div>
-      <div class="stat-row">
-        <span class="stat-key">AI win rate</span>
-        <span class="stat-val green" id="statWinRate">—</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Avg reward / ep</span>
-        <span class="stat-val green" id="statAvgReward">—</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Total reward</span>
-        <span class="stat-val green" id="statTotalReward">0.00</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Total episodes</span>
-        <span class="stat-val green" id="statEpisodes2">0</span>
-      </div>
+      <div class="stat-row"><span class="stat-key">AI win rate</span><span class="stat-val green" id="statWinRate">—</span></div>
+      <div class="stat-row"><span class="stat-key">Avg reward / ep</span><span class="stat-val green" id="statAvgReward">—</span></div>
+      <div class="stat-row"><span class="stat-key">Total reward</span><span class="stat-val green" id="statTotalReward">0.00</span></div>
+      <div class="stat-row"><span class="stat-key">Total episodes</span><span class="stat-val green" id="statEpisodes2">0</span></div>
     </div>
-
     <div class="card">
       <div class="card-title">Reward Design</div>
-      <div class="stat-row">
-        <span class="stat-key">Win</span>
-        <span class="stat-val green">+1.0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Draw</span>
-        <span class="stat-val amber">0.0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Loss</span>
-        <span class="stat-val red">−1.0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-key">Algorithm</span>
-        <span class="stat-val purple">Q-Learning</span>
-      </div>
+      <div class="stat-row"><span class="stat-key">Win</span><span class="stat-val green">+1.0</span></div>
+      <div class="stat-row"><span class="stat-key">Draw</span><span class="stat-val amber">0.0</span></div>
+      <div class="stat-row"><span class="stat-key">Loss</span><span class="stat-val red">−1.0</span></div>
+      <div class="stat-row"><span class="stat-key">Algorithm</span><span class="stat-val purple">Q-Learning</span></div>
     </div>
   </div>
 
-  <!-- ── Q-Table ─────────────────────────────────────────────── -->
   <div class="card" style="margin:.75rem 0;">
-    <div class="card-title">
-      Live Q-Table — State: (AI last move, Human last move) → Q-values per action
-    </div>
+    <div class="card-title">Live Q-Table — State: (AI last move, Human last move) → Q-values</div>
     <div class="qtable-grid" id="qtableGrid">
-      <div style="grid-column:1/-1;color:var(--muted);font-family:var(--font-mono);font-size:.6rem;padding:.5rem;">
-        Loading…
-      </div>
+      <div style="grid-column:1/-1;color:var(--muted);font-family:var(--font-mono);font-size:.6rem;padding:.5rem;">Loading…</div>
     </div>
   </div>
 
-  <!-- ── Reward Chart ────────────────────────────────────────── -->
   <div class="card chart-wrap" style="margin:.75rem 0;">
     <div class="card-title">Reward vs Episode — Cumulative Moving Average</div>
     <canvas id="rewardChart" height="120"></canvas>
   </div>
 
-  <!-- ── Match History ───────────────────────────────────────── -->
   <div class="card" style="margin:.75rem 0;">
     <div class="card-title">Match History (last 40 rounds)</div>
     <div class="history-list" id="historyList">
@@ -199,11 +587,356 @@
     </div>
   </div>
 
-</div><!-- /app-wrapper -->
+</div>
 
-<!-- Scripts (api.js must load before game.js) -->
-<script src="/static/js/api.js"></script>
-<script src="/static/js/game.js"></script>
+<script>
+/**
+ * api.js — backend fetch wrapper
+ * All API routes are prefixed with /api/ (required by Vercel).
+ * Works identically for local dev (python run.py) and Vercel.
+ */
+
+const API_BASE = window.location.protocol === "file:"
+  ? "http://localhost:8000"   // opened index.html directly as a file
+  : "";                       // served by FastAPI or Vercel — same origin
+
+async function apiCall(method, path, body = null) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(API_BASE + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+const API = {
+  health:        ()         => apiCall("GET",  "/api/health"),
+  play:          (move, ex) => apiCall("POST", "/api/play",           { move, exploit: ex }),
+  train:         (n)        => apiCall("POST", "/api/train",          { episodes: n }),
+  stats:         ()         => apiCall("GET",  "/api/stats"),
+  qtable:        ()         => apiCall("GET",  "/api/qtable"),
+  rewardHistory: ()         => apiCall("GET",  "/api/reward-history"),
+  reset:         ()         => apiCall("POST", "/api/reset"),
+  save:          ()         => apiCall("POST", "/api/save"),
+  load:          ()         => apiCall("POST", "/api/load"),
+};
+
+</script>
+<script>
+/**
+ * game.js — UI logic, chart rendering, Q-table display
+ * Depends on: api.js (loaded first), Chart.js (CDN)
+ */
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const MOVES  = ["Rock", "Paper", "Scissors"];
+const EMOJIS = ["🪨",  "📄",    "✂️"];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let history   = [];   // local copy of match history
+let exploitMode = true;
+let busy      = false;
+let rewardChart = null;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", async () => {
+  showResult("Connecting to AI backend…", "info");
+  try {
+    const h = await API.health();
+    setConn(true);
+    showResult(`Backend online · ${h.episodes_trained} episodes loaded`, "info");
+    // Refresh full UI from server
+    const [stats, qt, hist] = await Promise.all([
+      API.stats(), API.qtable(), API.rewardHistory()
+    ]);
+    renderStats(stats);
+    renderQTable(qt.qtable);
+    renderChart(hist);
+  } catch (e) {
+    setConn(false);
+    showResult("Cannot reach backend — start uvicorn first", "lose");
+  }
+});
+
+// ── Connection indicator ──────────────────────────────────────────────────────
+function setConn(ok) {
+  const dot = $("connDot");
+  const lbl = $("connLabel");
+  dot.className  = "conn-dot " + (ok ? "ok" : "err");
+  lbl.textContent = ok ? "Backend connected" : "Backend offline";
+}
+
+// ── Move buttons ──────────────────────────────────────────────────────────────
+async function humanPlay(moveIdx) {
+  if (busy) return;
+  busy = true;
+  setBtns(true);
+
+  // Animate question marks
+  $("humanDisplay").textContent = "❓";
+  $("humanDisplay").className   = "choice-display";
+  $("aiDisplay").textContent    = "🤔";
+  $("aiDisplay").className      = "choice-display";
+  showResult("", "");
+
+  try {
+    const data = await API.play(moveIdx, exploitMode);
+    const { round, stats, qtable } = data;
+
+    // Animate result after short delay
+    setTimeout(() => {
+      $("humanDisplay").textContent = EMOJIS[round.hum_move];
+      $("aiDisplay").textContent    = EMOJIS[round.ai_move];
+
+      const humanCls = round.outcome === "human" ? "flash-win"
+                     : round.outcome === "ai"    ? "flash-lose"
+                     : "flash-draw";
+      const aiCls    = round.outcome === "ai"    ? "flash-win"
+                     : round.outcome === "human" ? "flash-lose"
+                     : "flash-draw";
+      $("humanDisplay").className = "choice-display " + humanCls;
+      $("aiDisplay").className    = "choice-display " + aiCls;
+
+      // Result text
+      if (round.outcome === "human") {
+        showResult(`🎉 You Win!  ${MOVES[round.hum_move]} beats ${MOVES[round.ai_move]}`, "win");
+      } else if (round.outcome === "ai") {
+        showResult(`🤖 AI Wins!  ${MOVES[round.ai_move]} beats ${MOVES[round.hum_move]}`, "lose");
+      } else {
+        showResult(`🤝 Draw!  Both chose ${MOVES[round.hum_move]}`, "draw");
+      }
+
+      // Push to local history
+      history.push(round);
+      renderHistory();
+      renderStats(stats);
+      renderQTable(qtable);
+      renderEpsilon(stats.epsilon);
+
+      busy = false;
+      setBtns(false);
+    }, 380);
+  } catch (e) {
+    showResult("Error: " + e.message, "lose");
+    busy = false;
+    setBtns(false);
+  }
+}
+
+// ── Train ─────────────────────────────────────────────────────────────────────
+async function doTrain(n) {
+  if (busy) return;
+  busy = true;
+  setBtns(true);
+  showResult(`<span class="spinner"></span>Training ${n} episodes…`, "info");
+
+  try {
+    const data = await API.train(n);
+    renderStats(data.stats);
+    renderQTable(data.qtable);
+    renderChart(data.history);
+    renderEpsilon(data.stats.epsilon);
+    showResult(`✅ Trained ${n} episodes — ε=${data.stats.epsilon}`, "info");
+  } catch (e) {
+    showResult("Training error: " + e.message, "lose");
+  } finally {
+    busy = false;
+    setBtns(false);
+  }
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+async function doReset() {
+  if (!confirm("Reset the agent? All training will be lost.")) return;
+  try {
+    const data = await API.reset();
+    history = [];
+    renderStats(data.stats);
+    renderQTable([]);
+    renderChart({ episode_rewards:[], cumulative_rewards:[], episodes:[] });
+    renderHistory();
+    renderEpsilon(1.0);
+    $("humanDisplay").textContent = "🤔";
+    $("humanDisplay").className   = "choice-display";
+    $("aiDisplay").textContent    = "🤖";
+    $("aiDisplay").className      = "choice-display";
+    showResult("Game reset. Choose your move!", "info");
+  } catch (e) {
+    showResult("Reset error: " + e.message, "lose");
+  }
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────────
+function setMode(m) {
+  exploitMode = (m === "exploit");
+  $("modeExploit").className  = "mode-btn" + (exploitMode  ? " active" : "");
+  $("modeExplore").className  = "mode-btn" + (!exploitMode ? " active" : "");
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setBtns(disabled) {
+  ["btnRock","btnPaper","btnScissors"].forEach(id => {
+    $(id).disabled = disabled;
+  });
+  ["train10","train50","train200","btnReset"].forEach(id => {
+    $(id).disabled = disabled;
+  });
+}
+
+function showResult(msg, cls) {
+  const el = $("resultText");
+  el.innerHTML  = msg;
+  el.className  = "result-text" + (msg ? " show" : "") + (cls ? " " + cls : "");
+}
+
+// ── Render stats ──────────────────────────────────────────────────────────────
+function renderStats(s) {
+  $("scoreHuman").textContent   = s.losses ?? 0;
+  $("scoreDraw").textContent    = s.draws  ?? 0;
+  $("scoreAI").textContent      = s.wins   ?? 0;
+  $("scoreEpisodes").textContent= s.episodes ?? 0;
+
+  $("statAlpha").textContent    = s.alpha      ?? "0.30";
+  $("statGamma").textContent    = s.gamma      ?? "0.90";
+  $("statWinRate").textContent  = s.win_rate != null ? s.win_rate + "%" : "—";
+  $("statAvgReward").textContent= s.avg_reward ?? "—";
+  $("statTotalReward").textContent = (s.total_reward ?? 0).toFixed(2);
+  $("statEpisodes2").textContent   = s.episodes ?? 0;
+
+  renderEpsilon(s.epsilon ?? 1.0);
+}
+
+function renderEpsilon(eps) {
+  const pct = Math.max(0, ((eps - 0.05) / 0.95) * 100);
+  $("epsFill").style.width = pct + "%";
+  $("epsVal").textContent  = (+eps).toFixed(3);
+}
+
+// ── Render Q-table ────────────────────────────────────────────────────────────
+function qColor(v) {
+  if (v >  0.3)  return { bg: "rgba(92,252,188,.22)", color: "#5cfcbc" };
+  if (v >  0.05) return { bg: "rgba(92,252,188,.08)", color: "#5cfcbc99" };
+  if (v < -0.3)  return { bg: "rgba(252,92,124,.22)", color: "#fc5c7c" };
+  if (v < -0.05) return { bg: "rgba(252,92,124,.08)", color: "#fc5c7c99" };
+  return { bg: "rgba(255,255,255,.04)", color: "#6a6a8a" };
+}
+
+function renderQTable(rows) {
+  const grid = $("qtableGrid");
+  if (!rows || rows.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-family:var(--font-mono);font-size:.6rem;padding:.5rem;">No Q-values yet — train or play first.</div>`;
+    return;
+  }
+  let html = `
+    <div class="qt-h">State (AI→Hum)</div>
+    <div class="qt-h">🪨 Rock</div>
+    <div class="qt-h">📄 Paper</div>
+    <div class="qt-h">✂️ Scissors</div>
+    <div class="qt-h">Best Action</div>
+  `;
+  rows.forEach(r => {
+    const cR = qColor(r.rock), cP = qColor(r.paper), cS = qColor(r.scissors);
+    html += `
+      <div class="qt-state">${r.state}</div>
+      <div class="qt-cell" style="background:${cR.bg};color:${cR.color}">${(+r.rock).toFixed(3)}</div>
+      <div class="qt-cell" style="background:${cP.bg};color:${cP.color}">${(+r.paper).toFixed(3)}</div>
+      <div class="qt-cell" style="background:${cS.bg};color:${cS.color}">${(+r.scissors).toFixed(3)}</div>
+      <div class="qt-best">${r.best_action}</div>
+    `;
+  });
+  grid.innerHTML = html;
+}
+
+// ── Render chart ──────────────────────────────────────────────────────────────
+function renderChart(data) {
+  const ctx = $("rewardChart").getContext("2d");
+  const labels  = data.episodes         || [];
+  const cumData = data.cumulative_rewards || [];
+
+  if (rewardChart) {
+    rewardChart.data.labels            = labels;
+    rewardChart.data.datasets[0].data  = cumData;
+    rewardChart.update("none");
+    return;
+  }
+
+  rewardChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Avg Reward / Episode",
+        data: cumData,
+        borderColor: "#7c5cfc",
+        backgroundColor: "rgba(124,92,252,.08)",
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.35,
+      }],
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#12121a",
+          borderColor: "#7c5cfc",
+          borderWidth: 1,
+          titleColor: "#7c5cfc",
+          bodyColor: "#e8e8f0",
+          titleFont: { family: "Space Mono", size: 10 },
+          bodyFont:  { family: "Space Mono", size: 10 },
+          callbacks: { label: c => "Avg reward: " + c.parsed.y.toFixed(4) },
+        },
+      },
+      scales: {
+        x: {
+          grid:   { color: "rgba(255,255,255,.04)" },
+          ticks:  { color: "#6a6a8a", font: { family: "Space Mono", size: 9 }, maxTicksLimit: 8 },
+          border: { color: "rgba(255,255,255,.06)" },
+        },
+        y: {
+          grid:   { color: "rgba(255,255,255,.04)" },
+          ticks:  { color: "#6a6a8a", font: { family: "Space Mono", size: 9 } },
+          border: { color: "rgba(255,255,255,.06)" },
+        },
+      },
+    },
+  });
+}
+
+// ── Render history ────────────────────────────────────────────────────────────
+function renderHistory() {
+  const list = $("historyList");
+  if (history.length === 0) {
+    list.innerHTML = `<div class="hist-item" style="justify-content:center;">No rounds yet</div>`;
+    return;
+  }
+  const recent = history.slice(-40);
+  list.innerHTML = recent.map(h => {
+    const out = h.outcome === "human" ? "You Win"
+              : h.outcome === "ai"   ? "AI Wins" : "Draw";
+    const cls = h.outcome === "human" ? "win"
+              : h.outcome === "ai"   ? "lose"   : "draw";
+    const rew = h.reward > 0 ? `<span style="color:var(--win)">+1.0</span>`
+              : h.reward < 0 ? `<span style="color:var(--lose)">-1.0</span>`
+              : `<span style="color:var(--muted)">0.0</span>`;
+    return `<div class="hist-item">
+      <span class="hist-ep">#${h.episode}</span>
+      <span class="hist-move">${EMOJIS[h.hum_move]}${MOVES[h.hum_move]} vs ${EMOJIS[h.ai_move]}${MOVES[h.ai_move]}</span>
+      <span class="hist-out ${cls}">${out}</span>
+      <span class="hist-rew">${rew}</span>
+    </div>`;
+  }).join("");
+}
+</script>
 
 </body>
 </html>

@@ -1,22 +1,15 @@
 /**
- * api.js — thin client for the FastAPI backend
- * All fetch calls go through here so the base URL is configured once.
+ * api.js — backend fetch wrapper
+ * All API routes are prefixed with /api/ (required by Vercel).
+ * Works identically for local dev (python run.py) and Vercel.
  */
 
-// ── Config ────────────────────────────────────────────────────────────────────
-// In production (served from FastAPI) the API is on the same origin.
-// In local dev the backend is on port 8000.
-const API_BASE =
-  window.location.port === "8000" || window.location.port === ""
-    ? ""                    // same origin — FastAPI serves everything
-    : "http://localhost:8000"; // dev: frontend opened directly in browser
+const API_BASE = window.location.protocol === "file:"
+  ? "http://localhost:8000"   // opened index.html directly as a file
+  : "";                       // served by FastAPI or Vercel — same origin
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 async function apiCall(method, path, body = null) {
-  const opts = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  };
+  const opts = { method, headers: { "Content-Type": "application/json" } };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(API_BASE + path, opts);
   if (!res.ok) {
@@ -26,15 +19,14 @@ async function apiCall(method, path, body = null) {
   return res.json();
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
 const API = {
-  health:        ()         => apiCall("GET",  "/health"),
-  play:          (move, ex) => apiCall("POST", "/play",  { move, exploit: ex }),
-  train:         (n)        => apiCall("POST", "/train", { episodes: n }),
-  stats:         ()         => apiCall("GET",  "/stats"),
-  qtable:        ()         => apiCall("GET",  "/qtable"),
-  rewardHistory: ()         => apiCall("GET",  "/reward-history"),
-  reset:         ()         => apiCall("POST", "/reset"),
-  save:          ()         => apiCall("POST", "/save"),
-  load:          ()         => apiCall("POST", "/load"),
+  health:        ()         => apiCall("GET",  "/api/health"),
+  play:          (move, ex) => apiCall("POST", "/api/play",           { move, exploit: ex }),
+  train:         (n)        => apiCall("POST", "/api/train",          { episodes: n }),
+  stats:         ()         => apiCall("GET",  "/api/stats"),
+  qtable:        ()         => apiCall("GET",  "/api/qtable"),
+  rewardHistory: ()         => apiCall("GET",  "/api/reward-history"),
+  reset:         ()         => apiCall("POST", "/api/reset"),
+  save:          ()         => apiCall("POST", "/api/save"),
+  load:          ()         => apiCall("POST", "/api/load"),
 };
